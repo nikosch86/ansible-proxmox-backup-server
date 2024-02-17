@@ -55,7 +55,7 @@ Setting it to "host" will allow you to control access using the host firewall.
 
 Dependencies
 ------------
-None.
+Docker needs to be installed, use the `geerlingguy.docker` for example.
 
 
 Example Playbook

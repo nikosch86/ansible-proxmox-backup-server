@@ -1,0 +1,32 @@
+---
+name: CI
+'on':
+  pull_request:
+  push:
+
+defaults:
+  run:
+    working-directory: 'nikosch86.pbs'
+
+jobs:
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v4
+        with:
+          path: 'nikosch86.pbs'
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install test dependencies.
+        run: pip3 install yamllint
+
+      - name: Lint code.
+        run: |
+          yamllint .
