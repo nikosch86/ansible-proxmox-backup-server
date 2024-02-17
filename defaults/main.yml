@@ -1,0 +1,11 @@
+---
+pbs_service_dir: /opt/pbs
+pbs_service_user: root
+pbs_storage_dir: /data/pbs
+pbs_ssl_certificate: false
+pbs_ssl_certificate_key: false
+pbs_timezone: "Asia/Dubai"
+pbs_user_admin_password: "change_me"
+pbs_user_backup_password: "change_me"
+pbs_user_monitoring_password: "change_me"
+pbs_network_mode: "port"

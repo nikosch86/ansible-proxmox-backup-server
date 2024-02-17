@@ -1,0 +1,131 @@
+---
+- name: Ensure pbs service directory exists
+  ansible.builtin.file:
+    path: "{{ pbs_service_dir }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ pbs_service_user }}"
+    group: "{{ pbs_service_user }}"
+
+- name: Ensure pbs storage directory exists
+  ansible.builtin.file:
+    path: "{{ pbs_storage_dir }}"
+    state: directory
+    mode: "0750"
+    owner: backup
+    group: backup
+
+- name: Ensure pbs docker compose exists
+  ansible.builtin.template:
+    src: templates/compose.yml.j2
+    dest: "{{ pbs_service_dir }}/compose.yml"
+    mode: "0640"
+    owner: "{{ pbs_service_user }}"
+    group: "{{ pbs_service_user }}"
+
+- name: Recursive chmod of keydir
+  ansible.builtin.command: |
+    chown -R -c backup:backup "{{ pbs_storage_dir }}"
+  register: chmod_status
+  changed_when: chmod_status.stdout != ""
+
+- name: Ensure etc directory exists
+  ansible.builtin.file:
+    path: "{{ pbs_service_dir }}/etc"
+    state: directory
+    mode: "0700"
+    owner: backup
+    group: backup
+
+- name: Check wether datastore.cfg exists
+  ansible.builtin.stat:
+    path: "{{ pbs_service_dir }}/etc/datastore.cfg"
+  register: datastore_cfg
+
+- name: Ensure acl.cfg config exists
+  ansible.builtin.copy:
+    content: |
+      acl:1:/:admin@pbs:Admin
+      acl:1:/:backup@pbs,sync@pbs:DatastorePowerUser
+      acl:1:/:monitoring@pbs,monitoring@pbs!zabbix:Audit
+    dest: "{{ pbs_service_dir }}/etc/acl.cfg"
+    owner: backup
+    group: backup
+    mode: "0640"
+
+- name: Check if user.cfg exists
+  ansible.builtin.stat:
+    path: "{{ pbs_service_dir }}/etc/user.cfg"
+  register: user_cfg
+
+- name: Docker compose up  # noqa: no-changed-when
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: docker compose up -d --wait --wait-timeout 60
+  register: compose_project_up
+  changed_when: "'Started' in compose_project_up.stderr or 'Recreate' in compose_project_up.stderr"
+
+- name: Check if default datastore is configured
+  ansible.builtin.lineinfile:
+    path: "{{ pbs_service_dir }}/etc/datastore.cfg"
+    line: "datastore: {{ pbs_datastore }}"
+    create: false
+  check_mode: true
+  register: datastore_configured
+  changed_when: (datastore_configured is changed) or (datastore_configured is failed)
+  when: datastore_cfg.stat.exists
+
+- name: Check wether admin user exists
+  ansible.builtin.lineinfile:
+    path: "{{ pbs_service_dir }}/etc/user.cfg"
+    line: "user: admin@pbs"
+    create: false
+  check_mode: true
+  register: user_admin_configured
+  changed_when: (user_admin_configured is changed) or (user_admin_configured is failed)
+  when: user_cfg.stat.exists
+
+- name: Check wether backup user exists
+  ansible.builtin.lineinfile:
+    path: "{{ pbs_service_dir }}/etc/user.cfg"
+    line: "user: backup@pbs"
+    create: false
+  check_mode: true
+  register: user_backup_configured
+  changed_when: (user_backup_configured is changed) or (user_backup_configured is failed)
+  when: user_cfg.stat.exists
+
+- name: Check wether monitoring user exists
+  ansible.builtin.lineinfile:
+    path: "{{ pbs_service_dir }}/etc/user.cfg"
+    line: "user: monitoring@pbs"
+    create: false
+  check_mode: true
+  register: user_monitoring_configured
+  changed_when: (user_monitoring_configured is changed) or (user_monitoring_configured is failed)
+  when: user_cfg.stat.exists
+
+- name: Configure admin user  # noqa no-changed-when no-handler
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: "docker compose exec pbs proxmox-backup-manager user create admin@pbs --password {{ pbs_user_admin_password }}"
+  when: user_admin_configured is changed or not user_cfg.stat.exists
+
+- name: Configure backup user  # noqa no-changed-when no-handler
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: "docker compose exec pbs proxmox-backup-manager user create backup@pbs --password {{ pbs_user_backup_password }}"
+  when: user_backup_configured is changed or not user_cfg.stat.exists
+
+- name: Configure monitoring user  # noqa no-changed-when no-handler
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: "docker compose exec pbs proxmox-backup-manager user create monitoring@pbs --password {{ pbs_user_monitoring_password }}"
+  when: user_monitoring_configured is changed or not user_cfg.stat.exists
+  notify: Create monitoring token
+
+- name: Configure default datastore  # noqa no-changed-when no-handler
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: "docker compose exec pbs proxmox-backup-manager datastore create {{ pbs_datastore }} /mnt/backups --gc-schedule daily"
+  when: datastore_configured is changed or not datastore_cfg.stat.exists

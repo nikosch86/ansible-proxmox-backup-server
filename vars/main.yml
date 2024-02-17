@@ -1,0 +1,3 @@
+---
+pbs_image: "ghcr.io/nikosch86/docker-proxmox-backup-server:v1.0.0"
+pbs_datastore: backups

@@ -1,0 +1,38 @@
+version: '3.8'
+
+volumes:
+  lib:
+
+
+services:
+  pbs:
+    image: {{ pbs_image }}
+    mem_limit: 2G
+    volumes:
+      - ./etc:/etc/proxmox-backup
+      - ./logs:/var/log/proxmox-backup
+      - lib:/var/lib/proxmox-backup
+{% if pbs_ssl_certificate and pbs_ssl_certificate_key %}
+      - {{ pbs_ssl_certificate }}:/etc/proxmox-backup/proxy.pem:ro
+      - {{ pbs_ssl_certificate_key }}:/etc/proxmox-backup/proxy.key:ro
+{% endif %}
+      - {{ pbs_storage_dir }}:/mnt/backups
+    tmpfs:
+      - /run
+    environment:
+      TZ: {{ pbs_timezone }}
+    restart: unless-stopped
+    stop_signal: SIGHUP
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:8007"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+{% if pbs_network_mode == "host" %}
+    network_mode: host
+{% else %}
+    ports:
+      - '8007:8007/tcp'
+{% endif %}
+

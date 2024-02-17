@@ -1,0 +1,15 @@
+---
+- name: Configure monitoring token  # noqa no-changed-when no-handler
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: "docker compose exec pbs proxmox-backup-manager user generate-token monitoring@pbs zabbix"
+  register: token_monitoring_zabbix
+  listen: Create monitoring token
+
+- name: Display monitoring token
+  ansible.builtin.assert:
+    that:
+      - token_monitoring_zabbix
+    success_msg: "TAKE NOTE OF THE MONITORING TOKEN, IT WILL ONLY BE DISPLAYED ONCE: {{ token_monitoring_zabbix.stdout }}"
+  listen: Create monitoring token
+  changed_when: true
