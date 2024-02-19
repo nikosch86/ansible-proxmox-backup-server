@@ -23,12 +23,6 @@
     owner: "{{ pbs_service_user }}"
     group: "{{ pbs_service_user }}"
 
-- name: Recursive chmod of keydir
-  ansible.builtin.command: |
-    chown -R -c backup:backup "{{ pbs_storage_dir }}"
-  register: chmod_status
-  changed_when: chmod_status.stdout != ""
-
 - name: Ensure etc directory exists
   ansible.builtin.file:
     path: "{{ pbs_service_dir }}/etc"
