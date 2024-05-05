@@ -36,19 +36,18 @@
     path: "{{ pbs_service_dir }}/etc/datastore.cfg"
   register: datastore_cfg
 
-- name: Ensure acl.cfg config
-  ansible.builtin.blockinfile:
-    marker_begin: "### ANSIBLE MANAGED BLOCK DEFAULT ACL BEGIN"
-    marker_end: "### ANSIBLE MANAGED BLOCK DEFAULT ACL END"
-    block: |
-      acl:1:/:admin@pbs:Admin
-      acl:1:/:backup@pbs,sync@pbs:DatastorePowerUser
-      acl:1:/:monitoring@pbs,monitoring@pbs!zabbix:Audit
+- name: Ensure acl.cfg
+  ansible.builtin.lineinfile:
     path: "{{ pbs_service_dir }}/etc/acl.cfg"
+    line: "{{ item }}"
     owner: backup
     group: backup
     mode: "0640"
     create: true
+  loop:
+    - "acl:1:/:admin@pbs:Admin"
+    - "acl:1:/:backup@pbs,sync@pbs:DatastorePowerUser"
+    - "acl:1:/:monitoring@pbs,monitoring@pbs!zabbix:Audit"
 
 - name: Check if user.cfg exists
   ansible.builtin.stat:
