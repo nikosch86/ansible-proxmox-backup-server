@@ -12,7 +12,9 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.3
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.3
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
