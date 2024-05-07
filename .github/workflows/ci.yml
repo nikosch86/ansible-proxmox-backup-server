@@ -12,21 +12,20 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.3
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
         with:
           path: 'nikosch86.pbs'
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Install test dependencies.
         run: pip3 install yamllint
 
-      - name: Lint code.
+      - name: yamllint files
         run: |
           yamllint .
+
+      - name: Ansible lint
+        run: |
+          ansible-lint .
