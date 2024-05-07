@@ -4,10 +4,6 @@ name: CI
   pull_request:
   push:
 
-defaults:
-  run:
-    working-directory: 'nikosch86.pbs'
-
 jobs:
 
   lint:
@@ -18,8 +14,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
-        with:
-          path: 'nikosch86.pbs'
 
       - name: Install test dependencies.
         run: pipx install yamllint
