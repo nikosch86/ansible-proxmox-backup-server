@@ -1,6 +1,9 @@
 stages:
   - lint
 
+default:
+  tags: [docker]
+
 ansible-lint:
   stage: lint
   image: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.3
