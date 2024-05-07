@@ -22,7 +22,7 @@ jobs:
           path: 'nikosch86.pbs'
 
       - name: Install test dependencies.
-        run: pip3 install yamllint
+        run: pipx install yamllint
 
       - name: yamllint files
         run: |
