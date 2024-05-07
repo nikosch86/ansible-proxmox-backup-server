@@ -3,6 +3,6 @@ stages:
 
 ansible-lint:
   stage: lint
-  image: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.2
+  image: ghcr.io/nikosch86/docker-alpine-ansible:v0.0.3
   script:
     - ansible-lint .
