@@ -1,5 +1,6 @@
 ---
 galaxy_info:
+  role_name: proxmox_backup_server
   author: nikosch86
   description: installs dockerized proxmox backup server
   #  company: your company (optional)
