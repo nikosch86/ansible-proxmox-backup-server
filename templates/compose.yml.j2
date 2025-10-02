@@ -5,8 +5,6 @@ services:
   pbs:
     image: {{ pbs_image }}
     mem_limit: 2G
-    tmpfs:
-      - /run
     volumes:
       - ./etc:/etc/proxmox-backup
       - ./logs:/var/log/proxmox-backup
