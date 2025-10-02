@@ -1,3 +1,3 @@
 ---
-pbs_image: "ghcr.io/nikosch86/docker-proxmox-backup-server:v1.0.2-3.4.1"
+pbs_image: "ghcr.io/nikosch86/docker-proxmox-backup-server:v1.1.0-4.0.15"
 pbs_datastore: backups
