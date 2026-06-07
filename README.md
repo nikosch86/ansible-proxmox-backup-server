@@ -53,17 +53,36 @@ The password for the monitoring user.
 This variable can be used to control the network mode of the container.  
 Setting it to "host" will allow you to control access using the host firewall.  
 
+`pbs_disk_identity: false`  
+Opt-in flag that enables PBS disk management (the `Administration → Disks` UI, the
+`disks/list` API and `proxmox-backup-manager disk list`) with full SMART and udev
+identity (model/serial/wwn). When `true` it bind-mounts `/run/udev:/run/udev:ro` (for
+udev identity) **and** `/dev:/dev`, and adds the `SYS_RAWIO` and `SYS_ADMIN`
+capabilities. The two bind mounts and the capabilities are unioned (and de-duplicated)
+with `pbs_extra_volumes` and `pbs_cap_add`, so the flag is the single source of truth and
+those escape hatches stay available for anything extra.  
+The `/dev:/dev` bind is required on PBS 4.2+: with only `/run/udev` bound, PBS enumerates
+every device in the host's shared `/sys/block` and hard-`statx`es `/dev/<name>` for each,
+which `ENOENT`s for any device that is not passed through (loop\*/dm-\*/md\*/non-passed
+disks) and aborts the whole list with HTTP 400. Binding `/dev` supplies the inode so the
+`statx` succeeds; actual I/O stays least-privilege because the device cgroup
+(`pbs_devices`) still gates every read/write — the bind only provides inodes.  
+Pair this with `pbs_devices` to grant SMART access to the specific disks you care about.  
+
 `pbs_devices: []`  
 A list of host devices to expose to the container, in docker compose `devices:` syntax.  
-Useful for SMART monitoring of the backup disks, e.g. `["/dev/sda", "/dev/nvme0n1"]`.  
+This is the per-host allow-list that gates real SMART I/O, e.g. `["/dev/sda", "/dev/nvme0n1"]`.  
+Typically used together with `pbs_disk_identity: true`.  
 
 `pbs_cap_add: []`  
 A list of Linux capabilities to add to the container, in docker compose `cap_add:` syntax.  
-For SMART access on raw disks this is typically `["SYS_RAWIO", "SYS_ADMIN"]`.  
+For SMART access on raw disks this is `["SYS_RAWIO", "SYS_ADMIN"]` — both are added
+automatically by `pbs_disk_identity: true`, so this is only needed for additional capabilities.  
 
 `pbs_extra_volumes: []`  
 A list of additional volume mounts appended to the container, in docker compose `volumes:` syntax.  
-For SMART monitoring you usually want the udev runtime, e.g. `["/run/udev:/run/udev:ro"]`.  
+The udev runtime and `/dev` needed for disk identity are added automatically by
+`pbs_disk_identity: true`; use this only for additional mounts.  
 
 Dependencies
 ------------

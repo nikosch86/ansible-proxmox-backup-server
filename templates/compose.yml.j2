@@ -1,3 +1,9 @@
+{%- set _pbs_volumes = pbs_extra_volumes | default([]) -%}
+{%- set _pbs_caps = pbs_cap_add | default([]) -%}
+{%- if pbs_disk_identity | default(false) -%}
+{%-   set _pbs_volumes = (_pbs_volumes + ['/run/udev:/run/udev:ro', '/dev:/dev']) | unique -%}
+{%-   set _pbs_caps = (_pbs_caps + ['SYS_RAWIO', 'SYS_ADMIN']) | unique -%}
+{%- endif -%}
 volumes:
   lib:
 
@@ -14,7 +20,7 @@ services:
       - {{ pbs_ssl_certificate_key }}:/etc/proxmox-backup/proxy.key:ro
 {% endif %}
       - {{ pbs_storage_dir }}:/mnt/backups
-{% for volume in pbs_extra_volumes %}
+{% for volume in _pbs_volumes %}
       - {{ volume }}
 {% endfor %}
     tmpfs:
@@ -25,9 +31,9 @@ services:
       - {{ device }}
 {% endfor %}
 {% endif %}
-{% if pbs_cap_add %}
+{% if _pbs_caps %}
     cap_add:
-{% for cap in pbs_cap_add %}
+{% for cap in _pbs_caps %}
       - {{ cap }}
 {% endfor %}
 {% endif %}
