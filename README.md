@@ -53,6 +53,18 @@ The password for the monitoring user.
 This variable can be used to control the network mode of the container.  
 Setting it to "host" will allow you to control access using the host firewall.  
 
+`pbs_devices: []`  
+A list of host devices to expose to the container, in docker compose `devices:` syntax.  
+Useful for SMART monitoring of the backup disks, e.g. `["/dev/sda", "/dev/nvme0n1"]`.  
+
+`pbs_cap_add: []`  
+A list of Linux capabilities to add to the container, in docker compose `cap_add:` syntax.  
+For SMART access on raw disks this is typically `["SYS_RAWIO", "SYS_ADMIN"]`.  
+
+`pbs_extra_volumes: []`  
+A list of additional volume mounts appended to the container, in docker compose `volumes:` syntax.  
+For SMART monitoring you usually want the udev runtime, e.g. `["/run/udev:/run/udev:ro"]`.  
+
 Dependencies
 ------------
 Docker needs to be installed, use the `geerlingguy.docker` for example.

@@ -9,3 +9,6 @@ pbs_user_admin_password: "change_me"
 pbs_user_backup_password: "change_me"
 pbs_user_monitoring_password: "change_me"
 pbs_network_mode: "port"
+pbs_devices: []
+pbs_cap_add: []
+pbs_extra_volumes: []

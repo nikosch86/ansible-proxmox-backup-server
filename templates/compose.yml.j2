@@ -14,8 +14,23 @@ services:
       - {{ pbs_ssl_certificate_key }}:/etc/proxmox-backup/proxy.key:ro
 {% endif %}
       - {{ pbs_storage_dir }}:/mnt/backups
+{% for volume in pbs_extra_volumes %}
+      - {{ volume }}
+{% endfor %}
     tmpfs:
       - /run
+{% if pbs_devices %}
+    devices:
+{% for device in pbs_devices %}
+      - {{ device }}
+{% endfor %}
+{% endif %}
+{% if pbs_cap_add %}
+    cap_add:
+{% for cap in pbs_cap_add %}
+      - {{ cap }}
+{% endfor %}
+{% endif %}
     environment:
       TZ: {{ pbs_timezone }}
     restart: unless-stopped
