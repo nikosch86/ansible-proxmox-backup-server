@@ -84,6 +84,19 @@ A list of additional volume mounts appended to the container, in docker compose 
 The udev runtime and `/dev` needed for disk identity are added automatically by
 `pbs_disk_identity: true`; use this only for additional mounts.  
 
+`pbs_acl_lines:`  
+The ACL entries written to `etc/acl.cfg` (one `lineinfile` per entry). Defaults to the four
+built-in roles:  
+```yaml
+pbs_acl_lines:
+  - "acl:1:/:admin@pbs:Admin"
+  - "acl:1:/:backup@pbs,sync@pbs:DatastorePowerUser"
+  - "acl:1:/:monitoring@pbs,monitoring@pbs!zabbix:Audit"
+  - "acl:1:/:sync@pbs:DatastoreReader"
+```
+Override it to change the managed ACL lines, or set it to `[]` to make the task a no-op and
+cede ownership of `acl.cfg` entirely (e.g. if you template-manage the file yourself).  
+
 Dependencies
 ------------
 Docker needs to be installed, use the `geerlingguy.docker` for example.
