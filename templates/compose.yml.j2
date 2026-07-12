@@ -1,8 +1,12 @@
 {%- set _pbs_volumes = pbs_extra_volumes | default([]) -%}
 {%- set _pbs_caps = pbs_cap_add | default([]) -%}
+{%- set _pbs_cgroup_rules = pbs_device_cgroup_rules | default([]) -%}
 {%- if pbs_disk_identity | default(false) -%}
 {%-   set _pbs_volumes = (_pbs_volumes + ['/run/udev:/run/udev:ro', '/dev:/dev']) | unique -%}
 {%-   set _pbs_caps = (_pbs_caps + ['SYS_RAWIO', 'SYS_ADMIN']) | unique -%}
+{%-   if not pbs_devices and not _pbs_cgroup_rules -%}
+{%-     set _pbs_cgroup_rules = ['b *:* r'] -%}
+{%-   endif -%}
 {%- endif -%}
 volumes:
   lib:
@@ -29,6 +33,12 @@ services:
     devices:
 {% for device in pbs_devices %}
       - {{ device }}
+{% endfor %}
+{% endif %}
+{% if _pbs_cgroup_rules %}
+    device_cgroup_rules:
+{% for rule in _pbs_cgroup_rules %}
+      - '{{ rule }}'
 {% endfor %}
 {% endif %}
 {% if _pbs_caps %}

@@ -5,12 +5,14 @@ pbs_storage_dir: /data/pbs
 pbs_ssl_certificate: false
 pbs_ssl_certificate_key: false
 pbs_timezone: "Asia/Dubai"
+pbs_root_password: false
 pbs_user_admin_password: "change_me"
 pbs_user_backup_password: "change_me"
 pbs_user_monitoring_password: "change_me"
 pbs_network_mode: "port"
 pbs_disk_identity: false
 pbs_devices: []
+pbs_device_cgroup_rules: []
 pbs_cap_add: []
 pbs_extra_volumes: []
 pbs_acl_lines:

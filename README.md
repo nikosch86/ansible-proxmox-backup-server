@@ -12,6 +12,16 @@ Requirements
 
 None.
 
+Subscription
+------------
+
+Nodes deployed by this role are **unsubscribed by design** — a containerized PBS cannot
+hold a subscription. PBS reports `status: notfound` permanently, and monitoring will flag
+it. This is expected, not a misconfiguration: the subscription buys Proxmox's paid support,
+and PBS itself is fully functional without one.  
+If you monitor with the companion zabbix template, it alerts on subscription state by
+default; set `{$PBS.SUBSCRIPTION.STATE.ACTIVE}` to `notfound` to silence it.
+
 Role Variables
 --------------
 
@@ -40,8 +50,20 @@ It defaults to false, which will cause pbs to create a self signed certificate.
 `pbs_timezone: "Asia/Dubai"`  
 The timezone of the server.
 
+`pbs_root_password: false`  
+The password for the `root@pam` superuser. Defaults to `false`, which leaves the image
+default untouched.  
+`root@pam` is PAM-backed, so `proxmox-backup-manager` cannot set it — the role pipes
+`chpasswd` into the container instead. The container's `/etc/shadow` is *not* on a
+persisted volume, so it resets to the image default whenever the container is recreated;
+the role therefore re-applies this on every converge, which makes it self-healing. Set it
+from a vaulted variable.  
+
 `pbs_user_admin_password: "change_me"`  
-The password for the admin user.
+The password for the admin user.  
+Note the `@pbs` user passwords are only applied **when the user is created**. Changing
+this on an existing deployment does not rotate the password — do that in the PBS UI or
+with `proxmox-backup-manager`.
 
 `pbs_user_backup_password: "change_me"`  
 The password for the backup user.
@@ -54,25 +76,43 @@ This variable can be used to control the network mode of the container.
 Setting it to "host" will allow you to control access using the host firewall.  
 
 `pbs_disk_identity: false`  
-Opt-in flag that enables PBS disk management (the `Administration → Disks` UI, the
+Opt-in flag that enables PBS disk *reporting* (the `Administration → Disks` UI, the
 `disks/list` API and `proxmox-backup-manager disk list`) with full SMART and udev
 identity (model/serial/wwn). When `true` it bind-mounts `/run/udev:/run/udev:ro` (for
-udev identity) **and** `/dev:/dev`, and adds the `SYS_RAWIO` and `SYS_ADMIN`
-capabilities. The two bind mounts and the capabilities are unioned (and de-duplicated)
-with `pbs_extra_volumes` and `pbs_cap_add`, so the flag is the single source of truth and
-those escape hatches stay available for anything extra.  
+udev identity) **and** `/dev:/dev`, adds the `SYS_RAWIO` and `SYS_ADMIN`
+capabilities, and grants read-only access to the host's block devices. The two bind
+mounts and the capabilities are unioned (and de-duplicated) with `pbs_extra_volumes` and
+`pbs_cap_add`, so the flag is the single source of truth and those escape hatches stay
+available for anything extra.  
+The default is deliberately read-only: it covers SMART, wearout and `disk list`, but
+**not** the disk-*provisioning* actions in `Administration → Disks` (initialize GPT,
+create a datastore on a disk), which need write. If you provision disks from the PBS UI,
+opt in with `pbs_device_cgroup_rules: ["b *:* rmw"]`.  
 The `/dev:/dev` bind is required on PBS 4.2+: with only `/run/udev` bound, PBS enumerates
 every device in the host's shared `/sys/block` and hard-`statx`es `/dev/<name>` for each,
 which `ENOENT`s for any device that is not passed through (loop\*/dm-\*/md\*/non-passed
 disks) and aborts the whole list with HTTP 400. Binding `/dev` supplies the inode so the
-`statx` succeeds; actual I/O stays least-privilege because the device cgroup
-(`pbs_devices`) still gates every read/write — the bind only provides inodes.  
-Pair this with `pbs_devices` to grant SMART access to the specific disks you care about.  
+`statx` succeeds — but a bind mount only supplies the inode, never the device-cgroup
+permission, so `open()` on a disk still fails with `Operation not permitted` until
+something grants that permission.  
+By default the flag therefore also emits `device_cgroup_rules: ['b *:* r']` — read-only
+access to every block device — which is what makes SMART actually work out of the box.
+The wildcard default applies only when both `pbs_devices` and `pbs_device_cgroup_rules`
+are empty; setting either one replaces it.  
 
 `pbs_devices: []`  
-A list of host devices to expose to the container, in docker compose `devices:` syntax.  
-This is the per-host allow-list that gates real SMART I/O, e.g. `["/dev/sda", "/dev/nvme0n1"]`.  
-Typically used together with `pbs_disk_identity: true`.  
+A list of host devices to expose to the container, in docker compose `devices:` syntax,
+e.g. `["/dev/sda", "/dev/nvme0n1"]`. Docker grants each listed device `rwm` cgroup
+permission. Setting it suppresses the read-only wildcard default.  
+Note this is *more* privileged per disk than the default (`rwm` vs `r`) and it goes
+stale: a disk added, removed or renamed across a reboot silently drops out of the list,
+and SMART for it goes back to `unknown`. Prefer `pbs_device_cgroup_rules` unless you
+specifically need to pin the container to an exact set of disks.  
+
+`pbs_device_cgroup_rules: []`  
+A list of device cgroup rules, in docker compose `device_cgroup_rules:` syntax. Setting
+it replaces the default that `pbs_disk_identity: true` would otherwise apply.  
+Use `["b *:* rmw"]` to add write access for disk provisioning from the PBS UI.  
 
 `pbs_cap_add: []`  
 A list of Linux capabilities to add to the container, in docker compose `cap_add:` syntax.  

@@ -58,6 +58,15 @@
   register: compose_project_up
   changed_when: "'Started' in compose_project_up.stderr or 'Recreate' in compose_project_up.stderr"
 
+- name: Set root@pam password
+  ansible.builtin.command:
+    chdir: "{{ pbs_service_dir }}"
+    cmd: docker compose exec -T pbs chpasswd
+    stdin: "root:{{ pbs_root_password }}"
+  no_log: true
+  changed_when: false
+  when: pbs_root_password is truthy
+
 - name: Check if default datastore is configured
   ansible.builtin.lineinfile:
     path: "{{ pbs_service_dir }}/etc/datastore.cfg"
@@ -102,18 +111,21 @@
   ansible.builtin.command:
     chdir: "{{ pbs_service_dir }}"
     cmd: "docker compose exec pbs proxmox-backup-manager user create admin@pbs --password {{ pbs_user_admin_password }}"
+  no_log: true
   when: user_admin_configured is changed or not user_cfg.stat.exists
 
 - name: Configure backup user  # noqa no-changed-when no-handler
   ansible.builtin.command:
     chdir: "{{ pbs_service_dir }}"
     cmd: "docker compose exec pbs proxmox-backup-manager user create backup@pbs --password {{ pbs_user_backup_password }}"
+  no_log: true
   when: user_backup_configured is changed or not user_cfg.stat.exists
 
 - name: Configure monitoring user  # noqa no-changed-when no-handler
   ansible.builtin.command:
     chdir: "{{ pbs_service_dir }}"
     cmd: "docker compose exec pbs proxmox-backup-manager user create monitoring@pbs --password {{ pbs_user_monitoring_password }}"
+  no_log: true
   when: user_monitoring_configured is changed or not user_cfg.stat.exists
   notify: Create monitoring token
 
